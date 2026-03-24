@@ -1,0 +1,7 @@
+# Locally downloaded Tesseract bundles — loaded from CDN at runtime via sandbox.html
+tesseract.min.js
+tesseract-worker.min.js
+tesseract-core.wasm.js
+
+# macOS
+.DS_Store

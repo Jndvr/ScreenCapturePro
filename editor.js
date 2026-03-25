@@ -132,28 +132,29 @@ async function stitchCaptures(data) {
       baseCtx.fillStyle = '#fff';
       baseCtx.fillRect(0, 0, cW, cH);
 
-      const crT = Math.round(cr.top    * scale);
-      const crL = Math.round(cr.left   * scale);
-      const crW = Math.round(cr.width  * scale);
-      const crH = Math.round(cr.height * scale);
+      const crT  = Math.round(cr.top    * scale);
+      const crH  = Math.round(cr.height * scale);
       const imgH = imgs[0].naturalHeight;
 
+      // Header: everything above the scroll container (top nav bar, etc.) — full width, from first frame
       if (crT > 0) baseCtx.drawImage(imgs[0], 0, 0, cW, crT, 0, 0, cW, crT);
 
       for (let i = 0; i < captures.length; i++) {
-        const c   = captures[i];
-        const img = imgs[i];
-        const dY  = Math.round((cr.top + c.y) * scale);
-        baseCtx.drawImage(img, crL, crT, crW, crH, crL, dY, crW, crH);
+        const c  = captures[i];
+        const dY = Math.round((cr.top + c.y) * scale);
+        // Draw the FULL viewport width for this row so fixed sidebars (left nav, right panel)
+        // are included — previously only the container column was drawn, leaving them blank.
+        baseCtx.drawImage(imgs[i], 0, crT, cW, crH, 0, dY, cW, crH);
         loadingText.textContent = `Stitching… ${i+1}/${captures.length}`;
         await tick();
       }
 
+      // Footer: everything below the scroll container — full width, from last frame
       const footerSrcY = crT + crH;
       const footerH    = imgH - footerSrcY;
       if (footerH > 0) {
         const footerDstY = Math.round((cr.top + totalH) * scale);
-        baseCtx.drawImage(imgs[imgs.length-1], 0, footerSrcY, cW, footerH, 0, footerDstY, cW, footerH);
+        baseCtx.drawImage(imgs[imgs.length - 1], 0, footerSrcY, cW, footerH, 0, footerDstY, cW, footerH);
       }
     } else {
       // Standard page

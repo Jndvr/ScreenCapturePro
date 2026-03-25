@@ -25,10 +25,6 @@ let cropDragMode = null, cropDragStart = null;
 let pendingText    = null; // { x, y }
 let pendingCallout = null; // { x, y, w, h }
 
-// OCR state
-let ocrStartX = 0, ocrStartY = 0, isOcrDragging = false;
-let ocrExtractedText = '';
-let ocrInsertX = 0, ocrInsertY = 0;
 
 // Undo stack holds { data: ImageData, label: string, time: Date }
 const undoStack = [];
@@ -74,10 +70,6 @@ const cropBar       = document.getElementById('cropBar');
 const textInput     = document.getElementById('textInput');
 const stickyLayer   = document.getElementById('stickyLayer');
 const toast         = document.getElementById('toast');
-const ocrPanel      = document.getElementById('ocrPanel');
-const ocrResult     = document.getElementById('ocrResult');
-const ocrProgress   = document.getElementById('ocrProgress');
-const ocrActions    = document.getElementById('ocrActions');
 const jpegQualOpt   = document.getElementById('jpegQualOpt');
 const jpegQualSlider= document.getElementById('jpegQual');
 const jpegQualVal   = document.getElementById('jpegQualVal');
@@ -272,7 +264,7 @@ function selectTool(tool) {
     tool === 'step'    ? 'crosshair' :
     tool === 'sticky'  ? 'copy'      :
     tool === 'cursor'  ? 'crosshair' :
-    tool === 'ocr'     ? 'crosshair' : 'crosshair';
+    'crosshair';
 
   // Option visibility
   fillOption.style.display          = ['rect','ellipse','callout'].includes(tool) ? 'flex' : 'none';
@@ -282,7 +274,7 @@ function selectTool(tool) {
   stepOption.style.display          = tool === 'step'      ? 'flex' : 'none';
 
   if (tool === 'crop') startCropMode(); else endCropMode();
-  if (tool !== 'ocr') ocrPanel.classList.add('hidden');
+
   commitText();
 }
 
@@ -293,7 +285,7 @@ document.addEventListener('keydown', e => {
   const map = {
     v:'select', p:'pen', h:'highlight', a:'arrow', l:'line', r:'rect',
     e:'ellipse', q:'callout', n:'step', t:'text', b:'blur', k:'sticky', c:'crop',
-    m:'cursor', x:'ocr'
+    m:'cursor'
   };
   if (map[key] && !e.ctrlKey && !e.metaKey) { selectTool(map[key]); return; }
   if ((e.ctrlKey||e.metaKey) && key==='z') { e.preventDefault(); undo(); }
@@ -302,7 +294,7 @@ document.addEventListener('keydown', e => {
   if (key==='='||key==='+') setZoom(zoom*1.25);
   if (key==='-') setZoom(zoom/1.25);
   if (key==='0') fitToWindow();
-  if (key==='escape') { commitText(); ocrPanel.classList.add('hidden'); }
+  if (key==='escape') { commitText(); }
 });
 
 // =====================================================================
@@ -452,12 +444,7 @@ function onMouseDown(e) {
     placeCursor(x, y); return;
   }
   if (currentTool === 'crop') return;
-  if (currentTool === 'ocr') {
-    isOcrDragging = true;
-    ocrStartX = x; ocrStartY = y;
-    takeSnapshot();
-    return;
-  }
+
 
   isDrawing = true;
   startX = x; startY = y;
@@ -480,20 +467,7 @@ function onMouseMove(e) {
     return;
   }
 
-  // OCR drag preview
-  if (isOcrDragging) {
-    restoreSnapshot();
-    const w = x - ocrStartX, h = y - ocrStartY;
-    drawCtx.save();
-    drawCtx.setLineDash([6, 4]);
-    drawCtx.strokeStyle = '#44aaff';
-    drawCtx.lineWidth   = 2;
-    drawCtx.strokeRect(ocrStartX, ocrStartY, w, h);
-    drawCtx.fillStyle = 'rgba(68,170,255,0.1)';
-    drawCtx.fillRect(ocrStartX, ocrStartY, w, h);
-    drawCtx.restore();
-    return;
-  }
+
 
   if (!isDrawing) return;
 
@@ -520,18 +494,7 @@ function onMouseUp(e) {
   const { x, y } = canvasCoords(e);
   if (isPanning) { isPanning = false; drawCanvas.style.cursor = 'grab'; return; }
 
-  // OCR mouse up — extract region
-  if (isOcrDragging) {
-    isOcrDragging = false;
-    restoreSnapshot();
-    const w = x - ocrStartX, h = y - ocrStartY;
-    ocrInsertX = Math.min(ocrStartX, x);
-    ocrInsertY = Math.min(ocrStartY, y);
-    if (Math.abs(w) > 10 && Math.abs(h) > 10) {
-      runOcr(ocrInsertX, ocrInsertY, Math.abs(w), Math.abs(h));
-    }
-    return;
-  }
+
 
   if (!isDrawing) return;
   isDrawing = false;
@@ -1237,115 +1200,6 @@ async function copyToClipboard() {
   }, 'image/png');
 }
 
-// =====================================================================
-// Feature 6: OCR with Tesseract.js
-// =====================================================================
-document.getElementById('closeOcr').addEventListener('click', () => {
-  ocrPanel.classList.add('hidden');
-});
-
-document.getElementById('ocrCopy').addEventListener('click', () => {
-  if (!ocrExtractedText) return;
-  navigator.clipboard.writeText(ocrExtractedText)
-    .then(() => showToast('OCR text copied!', 'success'))
-    .catch(() => showToast('Copy failed', 'error'));
-});
-
-document.getElementById('ocrInsert').addEventListener('click', () => {
-  if (!ocrExtractedText) return;
-  // Insert the OCR text as a text annotation at the selection position
-  resetCtxStyle();
-  drawCtx.font      = `bold ${fontSize}px -apple-system, sans-serif`;
-  drawCtx.fillStyle = strokeColor;
-  drawCtx.globalAlpha = 1;
-  const lines = ocrExtractedText.split('\n').filter(l => l.trim());
-  lines.forEach((line, i) => {
-    drawCtx.fillText(line.trim(), ocrInsertX, ocrInsertY + fontSize + i * (fontSize * 1.3));
-  });
-  saveUndoState('OCR Insert');
-  ocrPanel.classList.add('hidden');
-  showToast('OCR text inserted as annotation', 'success');
-});
-
-// =====================================================================
-// OCR — sandboxed iframe approach
-// sandbox.html is a Chrome "sandbox" page (null-origin, unrestricted CSP)
-// so Tesseract.js can load from CDN without hitting MV3 script-src restrictions.
-// Communication is via postMessage with a transferred ArrayBuffer (zero-copy).
-// =====================================================================
-let _ocrFrame     = null;
-let _ocrPending   = {};
-let _ocrRequestId = 0;
-
-function getOcrSandbox() {
-  if (_ocrFrame) return _ocrFrame;
-  _ocrFrame = document.createElement('iframe');
-  _ocrFrame.src = chrome.runtime.getURL('sandbox.html');
-  _ocrFrame.style.cssText = 'display:none;width:0;height:0;border:none;position:absolute';
-  document.body.appendChild(_ocrFrame);
-  // Route replies back to waiting promises
-  window.addEventListener('message', (e) => {
-    const d = e.data;
-    if (!d || (d.type !== 'ocr-result' && d.type !== 'ocr-error')) return;
-    const resolve = _ocrPending[d.id];
-    if (resolve) { delete _ocrPending[d.id]; resolve(d); }
-  });
-  return _ocrFrame;
-}
-
-async function runOcr(rx, ry, rw, rh) {
-  ocrPanel.classList.remove('hidden');
-  ocrProgress.style.display = 'flex';
-  ocrResult.textContent     = 'Loading OCR engine… (first run ~5 s)';
-  ocrActions.style.display  = 'none';
-  ocrExtractedText = '';
-
-  try {
-    // Extract selected region from the canvas
-    const regionCanvas = document.createElement('canvas');
-    regionCanvas.width  = Math.max(1, rw);
-    regionCanvas.height = Math.max(1, rh);
-    const rctx = regionCanvas.getContext('2d');
-    rctx.drawImage(baseCanvas, rx, ry, rw, rh, 0, 0, rw, rh);
-    rctx.drawImage(drawCanvas, rx, ry, rw, rh, 0, 0, rw, rh);
-
-    // Transfer pixel data to sandbox via ArrayBuffer (zero-copy)
-    const imgData = rctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
-    const buffer  = imgData.data.buffer.slice(0); // clone so we can transfer
-    const id      = ++_ocrRequestId;
-    const frame   = getOcrSandbox();
-
-    ocrResult.textContent = 'Recognising text…';
-
-    const result = await new Promise((resolve) => {
-      _ocrPending[id] = resolve;
-      frame.contentWindow.postMessage(
-        { type: 'ocr', id, imageData: buffer, width: regionCanvas.width, height: regionCanvas.height },
-        '*',
-        [buffer]   // transfer (not copy) the buffer
-      );
-      // 60s timeout
-      setTimeout(() => {
-        if (_ocrPending[id]) { delete _ocrPending[id]; resolve({ type: 'ocr-error', error: 'Timeout' }); }
-      }, 60000);
-    });
-
-    ocrProgress.style.display = 'none';
-
-    if (result.type === 'ocr-error') throw new Error(result.error);
-
-    ocrExtractedText = result.text;
-    if (ocrExtractedText) {
-      ocrResult.textContent    = ocrExtractedText;
-      ocrActions.style.display = 'flex';
-    } else {
-      ocrResult.textContent = '(No text detected in this region)';
-    }
-  } catch (err) {
-    ocrProgress.style.display = 'none';
-    ocrResult.textContent     = 'OCR error: ' + err.message;
-  }
-}
 
 // =====================================================================
 // Toast

@@ -133,23 +133,91 @@ async function stitchCaptures(data) {
       baseCtx.fillRect(0, 0, cW, cH);
 
       const crT  = Math.round(cr.top    * scale);
+      const crL  = Math.round(cr.left   * scale);
+      const crW  = Math.round(cr.width  * scale);
       const crH  = Math.round(cr.height * scale);
+      const crR  = crL + crW;   // right edge of scroll container (px)
       const imgH = imgs[0].naturalHeight;
 
-      // Header: everything above the scroll container (top nav bar, etc.) — full width, from first frame
+      // ── Detect whether a panel column is truly fixed ──────────────────
+      // Compares a strip from the same region in tile 0 vs tile 1.
+      // Average per-channel pixel difference < 8/255 → fixed/sticky panel.
+      // If there's only one tile we can't compare, so fall back to full-width.
+      function isColumnFixed(srcX, srcW) {
+        if (imgs.length < 2 || srcW <= 0) return false;
+        const sw = Math.min(srcW, 40);                // sample up to 40px wide
+        const sh = Math.min(crH, 160);               // sample up to 160px tall
+        const sx = srcX + ((srcW - sw) / 2 | 0);
+        const sy = crT  + ((crH  - sh) / 2 | 0);
+        const grab = (img) => {
+          const c = document.createElement('canvas');
+          c.width = sw; c.height = sh;
+          c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+          return c.getContext('2d').getImageData(0, 0, sw, sh).data;
+        };
+        const dA = grab(imgs[0]), dB = grab(imgs[1]);
+        let diff = 0;
+        for (let k = 0; k < dA.length; k += 4)
+          diff += Math.abs(dA[k]-dB[k]) + Math.abs(dA[k+1]-dB[k+1]) + Math.abs(dA[k+2]-dB[k+2]);
+        return (diff / (sw * sh * 3)) < 8;
+      }
+
+      const leftFixed  = crL > 0  && isColumnFixed(0,   crL);
+      const rightFixed = crR < cW && isColumnFixed(crR, cW - crR);
+
+      // ── Helper: sample one pixel → rgb() string (for bg-fill) ─────────
+      function sampleColor(img, sx, sy) {
+        const t = document.createElement('canvas'); t.width = t.height = 1;
+        const x = t.getContext('2d');
+        x.drawImage(img, sx | 0, sy | 0, 1, 1, 0, 0, 1, 1);
+        const [r, g, b] = x.getImageData(0, 0, 1, 1).data;
+        return `rgb(${r},${g},${b})`;
+      }
+
+      // ── For fixed panels: pre-fill the full content height with the panel
+      //    background colour so there's no white void below the first viewport.
+      const contentEndY = Math.round((cr.top + totalH) * scale);
+      if (leftFixed) {
+        baseCtx.fillStyle = sampleColor(imgs[0], crL / 2, crT + crH / 2);
+        baseCtx.fillRect(0, crT, crL, contentEndY - crT);
+      }
+      if (rightFixed) {
+        baseCtx.fillStyle = sampleColor(imgs[0], crR + (cW - crR) / 2, crT + crH / 2);
+        baseCtx.fillRect(crR, crT, cW - crR, contentEndY - crT);
+      }
+
+      // ── Header: everything above the scroll container — full width ─────
       if (crT > 0) baseCtx.drawImage(imgs[0], 0, 0, cW, crT, 0, 0, cW, crT);
 
+      // ── Tile loop ──────────────────────────────────────────────────────
+      // Fixed panels are excluded from the per-tile draw; dynamic panels
+      // (content that changes between tiles) are drawn every tile.
       for (let i = 0; i < captures.length; i++) {
-        const c  = captures[i];
-        const dY = Math.round((cr.top + c.y) * scale);
-        // Draw the FULL viewport width for this row so fixed sidebars (left nav, right panel)
-        // are included — previously only the container column was drawn, leaving them blank.
-        baseCtx.drawImage(imgs[i], 0, crT, cW, crH, 0, dY, cW, crH);
+        const dY = Math.round((cr.top + captures[i].y) * scale);
+
+        if (leftFixed && rightFixed) {
+          // Both panels fixed → draw content column only
+          baseCtx.drawImage(imgs[i], crL, crT, crW,      crH, crL, dY, crW,      crH);
+        } else if (leftFixed) {
+          // Left fixed, right dynamic → content + right
+          baseCtx.drawImage(imgs[i], crL, crT, cW - crL, crH, crL, dY, cW - crL, crH);
+        } else if (rightFixed) {
+          // Right fixed, left dynamic → left + content
+          baseCtx.drawImage(imgs[i], 0,   crT, crR,      crH, 0,   dY, crR,      crH);
+        } else {
+          // Both dynamic → full viewport width
+          baseCtx.drawImage(imgs[i], 0,   crT, cW,       crH, 0,   dY, cW,       crH);
+        }
+
         loadingText.textContent = `Stitching… ${i+1}/${captures.length}`;
         await tick();
       }
 
-      // Footer: everything below the scroll container — full width, from last frame
+      // ── Fixed panels composited once on top ────────────────────────────
+      if (leftFixed)  baseCtx.drawImage(imgs[0], 0,   crT, crL,      crH, 0,   crT, crL,      crH);
+      if (rightFixed) baseCtx.drawImage(imgs[0], crR, crT, cW - crR, crH, crR, crT, cW - crR, crH);
+
+      // ── Footer: everything below the scroll container — full width ─────
       const footerSrcY = crT + crH;
       const footerH    = imgH - footerSrcY;
       if (footerH > 0) {
@@ -526,7 +594,6 @@ function onMouseLeave() {
   if (isDrawing && currentTool === 'highlight') {
     drawHighlightStroke(highlightPoints); saveUndoState('Highlight'); isDrawing = false;
   }
-  if (isOcrDragging) { isOcrDragging = false; restoreSnapshot(); }
   if (isPanning) { isPanning = false; drawCanvas.style.cursor = 'grab'; }
 }
 

@@ -37,7 +37,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.action === 'startRecording') {
-    chrome.tabs.create({ url: chrome.runtime.getURL('recording.html') });
+    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+      if (!tab?.id) return;
+      if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://')) return;
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['gif_encoder.js', 'recorder_overlay.js']
+      }).catch(() => {});
+    });
     sendResponse({ ok: true });
     return true;
   }

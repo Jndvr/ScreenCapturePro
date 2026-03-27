@@ -21,10 +21,14 @@ let selectedDelay = 0;
 let countdownTimer = null;
 
 // ----- Delay buttons -----
-document.querySelectorAll('.delay-btn').forEach(btn => {
+document.querySelectorAll('.pill[data-delay]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.delay-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.pill[data-delay]').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
     selectedDelay = parseInt(btn.dataset.delay, 10);
   });
 });
@@ -207,4 +211,12 @@ recordBtn.addEventListener('click', async () => {
   } catch (err) {
     showStatus(`Error: ${err.message}`, 'error');
   }
+});
+
+// ----- Footer links -----
+document.getElementById('supportBtn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://ko-fi.com/jndvr' });
+});
+document.getElementById('feedbackBtn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://tally.so/r/WOPe9v' });
 });

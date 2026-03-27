@@ -319,4 +319,4 @@ Want to connect? Find me on LinkedIn:
 
 ## License
 
-Source-available — free to use, not licensed for redistribution or use in competing products. For redistribution or partnership enquiries contact [Jan Düver](https://www.linkedin.com/in/janduever/).
+MIT — free to use, modify, and distribute. See [LICENSE](LICENSE) for details.

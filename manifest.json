@@ -42,11 +42,5 @@
       "suggested_key": { "default": "Alt+Shift+R", "mac": "Alt+Shift+R" },
       "description": "Capture region"
     }
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["editor.html", "recording.html"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

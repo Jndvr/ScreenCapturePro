@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — ScreenCapture Pro</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      background: #0f0f11;
+      color: #d8d8e0;
+      padding: 48px 24px 80px;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: #f0f0f4;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f0f0f4;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .updated {
+      font-size: 13px;
+      color: #606070;
+      margin-bottom: 40px;
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 36px;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f0f0f4;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #a8a8b8;
+      margin-bottom: 12px;
+    }
+    p:last-child { margin-bottom: 0; }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    ul li {
+      color: #a8a8b8;
+      padding: 5px 0 5px 20px;
+      position: relative;
+    }
+    ul li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: #e8485e;
+    }
+
+    .highlight {
+      background: rgba(232, 72, 94, 0.1);
+      border: 1px solid rgba(232, 72, 94, 0.25);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 36px;
+      color: #d0d0da;
+      font-size: 14px;
+    }
+    .highlight strong {
+      color: #f0f0f4;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #222228;
+      margin: 0 0 36px;
+    }
+
+    a {
+      color: #e8485e;
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    .footer {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid #222228;
+      font-size: 13px;
+      color: #505060;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#e8485e"/>
+      <rect x="5" y="7" width="18" height="14" rx="2" stroke="white" stroke-width="1.5" fill="none"/>
+      <circle cx="14" cy="14" r="4" fill="white" opacity="0.9"/>
+      <circle cx="14" cy="14" r="2" fill="#e8485e"/>
+    </svg>
+    <span class="brand-name">ScreenCapture Pro</span>
+  </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: April 2, 2026</p>
+
+  <div class="highlight">
+    <strong>Short version:</strong> ScreenCapture Pro operates entirely on your device. It does not collect, transmit, or store any personal data on external servers. Everything stays local.
+  </div>
+
+  <section>
+    <h2>Overview</h2>
+    <p>ScreenCapture Pro ("the Extension") is a browser extension for capturing screenshots, annotating images, and recording your screen. All processing is performed locally within your browser — no data leaves your device.</p>
+    <p>We do not operate any servers, analytics pipelines, or data collection systems tied to this extension.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Data We Do Not Collect</h2>
+    <p>The Extension does not collect, transmit, or share:</p>
+    <ul>
+      <li>Screenshots or screen recordings you create</li>
+      <li>The content of pages you visit</li>
+      <li>Your browsing history</li>
+      <li>Any personally identifiable information</li>
+      <li>Usage statistics or analytics</li>
+      <li>Crash reports</li>
+    </ul>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>How the Extension Works</h2>
+    <p>All operations are local to your browser:</p>
+    <ul>
+      <li><strong>Screenshots</strong> are captured using the browser's built-in <code>tabs.captureVisibleTab</code> API and stitched together in memory. They are never uploaded anywhere.</li>
+      <li><strong>The editor</strong> runs entirely in a local extension page. Annotations, blur, crop, and export operations happen in your browser's memory.</li>
+      <li><strong>Screen recordings</strong> are captured via the browser's <code>MediaRecorder</code> API and saved directly to your device when you click Save. No recording data is transmitted.</li>
+      <li><strong>Exports</strong> (PNG, JPEG, PDF, clipboard) are handled locally and delivered to your device or clipboard only.</li>
+      <li><strong>URL/timestamp stamps</strong> (optional feature) use the current tab's URL to render text onto the image locally. The URL is never sent anywhere.</li>
+    </ul>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Permissions Explained</h2>
+    <p>The Extension requests the following browser permissions:</p>
+    <ul>
+      <li><strong>tabs / activeTab</strong> — to read the active tab's URL and dimensions for capturing and URL-stamping features.</li>
+      <li><strong>scripting</strong> — to inject the content script that scrolls the page during full-page capture, and the recording overlay.</li>
+      <li><strong>downloads</strong> — to save exported images and recordings to your device.</li>
+      <li><strong>clipboardWrite</strong> — to copy a screenshot to your clipboard when you use the Copy button.</li>
+      <li><strong>storage</strong> — to temporarily hold screenshot data between the capture step and the editor page. This data lives only in browser memory and is cleared after 5 minutes.</li>
+      <li><strong>webNavigation</strong> — to enumerate page frames so the content script can be injected into iframes during full-page capture.</li>
+      <li><strong>host_permissions (&lt;all_urls&gt;)</strong> — required so the content script can be injected on any website you choose to capture.</li>
+    </ul>
+    <p>None of these permissions are used to collect or exfiltrate data.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Third-Party Services</h2>
+    <p>The Extension itself makes no third-party network requests. The optional footer links in the popup (Support and Feedback) open external websites in a new tab only when you explicitly click them — no data is sent automatically.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Children's Privacy</h2>
+    <p>The Extension does not collect any information from anyone, including children under the age of 13.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Changes to This Policy</h2>
+    <p>If this policy changes materially, the updated date at the top of this page will be revised. Continued use of the Extension after changes constitutes acceptance of the updated policy.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions about this privacy policy? Reach out via the Feedback button in the extension popup or open an issue on the project's repository.</p>
+  </section>
+
+  <div class="footer">
+    ScreenCapture Pro &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; All screenshot and recording data stays on your device.
+  </div>
+
+</div>
+</body>
+</html>

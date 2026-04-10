@@ -1173,6 +1173,31 @@ document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
 document.getElementById('jpegBtn').addEventListener('click', downloadJpeg);
 document.getElementById('pdfBtn').addEventListener('click', downloadPdf);
 
+// ---- Canvas right-click: copy merged canvas instead of transparent drawCanvas ----
+const canvasContextMenu = document.getElementById('canvasContextMenu');
+
+canvasContainer.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  canvasContextMenu.style.display = 'block';
+  const menuW = 150, menuH = 40;
+  const x = Math.min(e.clientX, window.innerWidth  - menuW);
+  const y = Math.min(e.clientY, window.innerHeight - menuH);
+  canvasContextMenu.style.left = x + 'px';
+  canvasContextMenu.style.top  = y + 'px';
+});
+
+document.getElementById('ctxCopyImage').addEventListener('click', () => {
+  canvasContextMenu.style.display = 'none';
+  copyToClipboard();
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!canvasContextMenu.contains(e.target)) canvasContextMenu.style.display = 'none';
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') canvasContextMenu.style.display = 'none';
+});
+
 function downloadPng() {
   const link = document.createElement('a');
   link.download = `screenshot_${Date.now()}.png`;

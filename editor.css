@@ -515,6 +515,33 @@ body { display: flex; flex-direction: column; position: relative; }
 }
 .history-time { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
 
+/* ---- Canvas context menu ---- */
+#canvasContextMenu {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 400;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  min-width: 140px;
+}
+#canvasContextMenu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 7px 12px;
+  text-align: left;
+  font-size: 13px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#canvasContextMenu button:hover {
+  background: var(--hover);
+}
+
 /* ---- Toast ---- */
 #toast {
   position: fixed;

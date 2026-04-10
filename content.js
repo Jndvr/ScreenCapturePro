@@ -128,14 +128,19 @@ function findFixedElements() {
 
 function hideElements(els) {
   els.forEach(function(el) {
+    el.__scpOrigOpacity    = el.style.opacity;
     el.__scpOrigVisibility = el.style.visibility;
+    // opacity:0 cannot be overridden by descendants (unlike visibility:hidden)
+    el.style.opacity    = '0';
     el.style.visibility = 'hidden';
   });
 }
 
 function showElements(els) {
   els.forEach(function(el) {
+    el.style.opacity    = el.__scpOrigOpacity    !== undefined ? el.__scpOrigOpacity    : '';
     el.style.visibility = el.__scpOrigVisibility !== undefined ? el.__scpOrigVisibility : '';
+    delete el.__scpOrigOpacity;
     delete el.__scpOrigVisibility;
   });
 }
@@ -173,15 +178,17 @@ function getPositions(callback, info) {
 
   var total = arrs.length;
 
-  // Feature 4: Find fixed/sticky elements before starting the loop
-  var fixedEls = findFixedElements();
+  // Track which fixed elements were hidden in the current strip so we can
+  // restore exactly those nodes (handles React re-renders between strips).
+  var hiddenThisStrip = [];
 
   function cleanUp() {
     html.style.overflow = origOv;
     if (body) body.style.overflowY = origOY;
     window.scrollTo(origX, origY);
-    // Always restore fixed elements visibility on cleanup
-    showElements(fixedEls);
+    // Restore any elements hidden in the last strip
+    showElements(hiddenThisStrip);
+    hiddenThisStrip = [];
   }
 
   (function next() {
@@ -189,14 +196,13 @@ function getPositions(callback, info) {
     var y = arrs.shift();
     window.scrollTo(0, y);
 
-    // Feature 4: Hide fixed elements for all strips except the topmost (y near 0)
-    // The last strip in arrs is the topmost scroll position.
-    // arrs has already been shifted, so when arrs is empty we just finished the last.
-    // We hide fixed elements when y > winH/2 (not the top of the page).
+    // Feature 4: Hide fixed/sticky elements for every strip except the topmost.
+    // Re-query each iteration so React/SPA re-renders don't produce stale refs.
+    showElements(hiddenThisStrip);   // restore previous strip first
+    hiddenThisStrip = [];
     if (y > winH / 2) {
-      hideElements(fixedEls);
-    } else {
-      showElements(fixedEls);
+      hiddenThisStrip = findFixedElements();
+      hideElements(hiddenThisStrip);
     }
 
     window.setTimeout(function() {
@@ -212,8 +218,6 @@ function getPositions(callback, info) {
         };
         var t = window.setTimeout(cleanUp, 5000);
         chrome.runtime.sendMessage(data, function(ok) {
-          // Always restore fixed elements after each capture
-          showElements(fixedEls);
           window.clearTimeout(t);
           if (ok) next(); else cleanUp();
         });
